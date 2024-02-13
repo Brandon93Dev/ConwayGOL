@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.Http;
 using System.Windows;
+using ConwayGOL.App_Start;
 using MoreLinq;
 
 namespace Vector_Test
@@ -15,6 +18,10 @@ namespace Vector_Test
 
         static void Main(string[] args)
         {
+            StartListener();
+
+            SetupApiLogic();
+                        
             //List<Vector2> VectorList = new List<Vector2>();
             List<Vector2> vectorList = new List<Vector2>();
 
@@ -55,6 +62,53 @@ namespace Vector_Test
             Console.ReadLine();
         }
 
+        #region API Handlers and Host Logic
+        private static void StartListener()
+        {
+            var listener = new HttpListener();
+            listener.Prefixes.Add("http://localhost:5000/");  // Port 0 for dynamic assignment
+            listener.Start();
+
+            Task.Run(() => HandleApiRequests(listener));
+
+            // Output the actual listening URL
+            Console.WriteLine($"Listening on: {listener.Prefixes.FirstOrDefault()}");
+        }
+
+        private static void SetupApiLogic()
+        {
+            //Register Web API Configuration so that the Angular app can call from
+            //this console app as it will act as a server and do all the logic and
+            //processing for the game
+            var config = new HttpConfiguration();
+            WebApiConfig.Register(config);
+        }
+
+        static async Task HandleApiRequests(HttpListener listener)
+        {
+            while (true)
+            {
+                var context = await listener.GetContextAsync();
+                await ProcessRequestAsync(context);
+            }
+        }
+
+        static async Task ProcessRequestAsync(HttpListenerContext context)
+        {
+            // Your logic to handle the API request asynchronously
+            // ...
+
+            // Send a response
+            var response = context.Response;
+            var responseString = "API response";
+            var buffer = System.Text.Encoding.UTF8.GetBytes(responseString);
+            response.ContentLength64 = buffer.Length;
+            await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+            response.Close();
+        }
+        #endregion
+
+        //add unit test to ensure that atleast one living cell is added
         static List<Vector2> GenerateSeed()
         {
             var outList = new List<Vector2>();
